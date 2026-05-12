@@ -1,6 +1,6 @@
 "use client";
 
-import { NavLink } from "react-router-dom";
+import { NavLink,useParams } from "react-router-dom";
 
 const courses = [
   {
@@ -66,6 +66,13 @@ const courses = [
 ];
 
 export default function Courses() {
+
+  const {courseID} = useParams();
+
+  console.log(courseID);
+  
+
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 px-6 py-12 relative overflow-hidden font-sans">
       

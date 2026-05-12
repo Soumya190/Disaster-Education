@@ -12,7 +12,6 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
 function App() {
 
-
   const GoogleAuthWrapper=()=>{
     return(
       <GoogleOAuthProvider clientId='894782704741-k8erh8o4hg48oj97j8v9lvtdhfr9o8qt.apps.googleusercontent.com'>
@@ -35,7 +34,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
-        <Route path="/course" element={<Courses />} />
+        <Route path="/course" element={<Courses/>} />
         <Route path='/signup' element={<GoogleAuthWrapper/>}/>
         <Route path='/login' element={<GoogleAuthWrapperContainer/>}/>
         <Route path='/course/:courseID' element={<CourseDetails/>}/>
