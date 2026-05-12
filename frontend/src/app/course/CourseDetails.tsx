@@ -1,10 +1,10 @@
-import { useState,useEffect } from "react";
+import { useState,useEffect } from "react"
 
 const CourseDetails = ()=>{
 
     useEffect(()=>{
         const fetchData = async()=>{
-            const data = await fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&key=AIzaSyDmDO6-IzwS-jPmdnvg7iyMOwidSxcLg_g&q=disaster');
+            const data = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&key=${import.meta.env.VITE_API_KEY}&q=disaster`);
             const res = data.json();
             console.log(res);
         }

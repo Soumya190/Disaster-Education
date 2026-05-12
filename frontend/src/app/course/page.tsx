@@ -2,6 +2,7 @@
 
 import { NavLink,useParams } from "react-router-dom";
 
+
 const courses = [
   {
     id: 0,
