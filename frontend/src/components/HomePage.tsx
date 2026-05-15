@@ -1,11 +1,48 @@
 "use client";
 
 import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 export default function Home() {
+
+    const [disasters, setDisasters] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const data = await fetch('https://www.gdacs.org/gdacsapi/api/Events/geteventlist/homepagetable');
+                const res = await data.json();
+
+                // GDACS standard response usually wraps the array inside an 'events' or 'features' key, 
+                // or returns it directly. We fall back safely.
+                const incidentList = res.events || res || [];
+                setDisasters(incidentList);
+            } catch (error) {
+                console.error("Failed to fetch global incidents:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    const getDisasterStyles = (eventType: any) => {
+        const types = {
+            EQ: { label: "Earthquake", emoji: "🌋", color: "from-red-500/20 to-orange-500/20 text-orange-400 border-orange-500/30" },
+            TC: { label: "Cyclone", emoji: "🌀", color: "from-blue-500/20 to-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+            FL: { label: "Flood", emoji: "🌊", color: "from-blue-600/20 to-indigo-500/20 text-blue-400 border-blue-500/30" },
+            VO: { label: "Volcano", emoji: "🌋", color: "from-red-600/20 to-amber-500/20 text-red-400 border-red-500/30" },
+            WF: { label: "Wildfire", emoji: "🔥", color: "from-orange-600/20 to-yellow-500/20 text-orange-500 border-orange-500/30" },
+            DR: { label: "Drought", emoji: "☀️", color: "from-amber-600/20 to-yellow-700/20 text-amber-500 border-amber-500/30" }
+        };
+        return types[eventType] || { label: eventType || "Incident", emoji: "🚨", color: "from-slate-500/20 to-slate-600/20 text-slate-400 border-white/10" };
+    };
+
     return (
         <div className="bg-[#020617] text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 min-h-screen font-sans overflow-x-hidden">
-            
+
             {/* ANIMATED BACKGROUND MESH */}
             <div className="fixed inset-0 z-0 pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
@@ -111,6 +148,59 @@ export default function Home() {
                 </div>
             </section>
 
+            <div className="w-full max-w-7xl mx-auto z-10 mt-12 mb-6">
+                <div className="flex items-center gap-3 mb-6 px-4 relative">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute"></span>
+                    <span className="w-2 h-2 rounded-full bg-red-500 relative"></span>
+                    <h3 className="text-sm font-bold tracking-[0.2em] uppercase text-slate-400 pl-4">Live Global Incidents Feed</h3>
+                </div>
+
+                {loading ? (
+                    <div className="h-48 flex items-center justify-center text-slate-500 text-sm font-semibold">
+                        Connecting to Global Radar Systems...
+                    </div>
+                ) : disasters.length === 0 ? (
+                    <div className="h-48 flex items-center justify-center text-slate-500 text-sm font-semibold">
+                        No active incidents monitored at this moment.
+                    </div>
+                ) : (
+                    <div className="relative w-full overflow-hidden py-4">
+                        <div className="flex gap-6 w-max animate-[scroll_40s_linear_infinite] hover:[animation-play-state:paused]">
+                            {[...disasters, ...disasters].map((incident, index) => {
+                                const style = getDisasterStyles(incident.eventtype);
+                                return (
+                                    <div
+                                        key={`${incident.eventid || index}-${index}`}
+                                        className="w-[350px] flex-shrink-0 bg-slate-900/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl flex flex-col justify-between hover:border-white/10 hover:bg-slate-900/60 transition-all group"
+                                    >
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-start">
+                                                <span className={`px-3 py-1 text-xs font-black uppercase rounded-lg bg-gradient-to-r border ${style.color}`}>
+                                                    {style.emoji} {style.label}
+                                                </span>
+                                                <span className="text-[11px] font-bold text-slate-500 tracking-wider">
+                                                    Alert: {incident.alertlevel || 'Unknown'}
+                                                </span>
+                                            </div>
+                                            <h4 className="text-white font-bold text-base tracking-tight line-clamp-1 group-hover:text-cyan-400 transition-colors">
+                                                {incident.eventname}
+                                            </h4>
+                                            <p className="text-slate-400 text-xs leading-relaxed line-clamp-2">
+                                                {incident.description || 'No immediate textual damage analysis reported.'}
+                                            </p>
+                                        </div>
+                                        <div className="border-t border-white/5 mt-4 pt-3 flex justify-between items-center text-[11px] text-slate-500 font-medium">
+                                            <span>📍 {incident.country || 'Global Waters'}</span>
+                                            <span>⏱️ {incident.fromdate ? incident.fromdate.split('T')[0] : 'Recent'}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* FEATURES */}
             <section id="features" className="py-32 px-6 bg-[#020617] relative">
                 <div className="max-w-7xl mx-auto">
@@ -200,13 +290,17 @@ export default function Home() {
             </footer>
 
             <style dangerouslySetInnerHTML={{
-  __html: `
-    @keyframes shimmer {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-  `
-}} />
+                __html: `
+                @keyframes shimmer {
+                  0% { transform: translateX(-100%); }
+                  100% { transform: translateX(100%); }
+                }
+                @keyframes scroll {
+                  0% { transform: translateX(0); }
+                  100% { transform: translateX(-10%); }
+                }
+                `
+            }} />
         </div>
     );
 }
