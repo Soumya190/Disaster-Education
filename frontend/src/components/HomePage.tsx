@@ -3,23 +3,55 @@
 import { NavLink } from "react-router-dom";
 import { useState, useEffect } from "react";
 
+interface EarthquakeIncident {
+    eventid: number | string;
+    eventtype: string;
+    eventname: string;
+    alertlevel: string;
+    description: string;
+    country: string;
+    fromdate: string;
+}
+
 export default function Home() {
 
-    const [disasters, setDisasters] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [disasters, setDisasters] = useState<EarthquakeIncident[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
 
-    useEffect(() => {
+   useEffect(() => {
         const fetchData = async () => {
             try {
-                const data = await fetch('https://www.gdacs.org/gdacsapi/api/Events/geteventlist/homepagetable');
-                const res = await data.json();
+                // Fetching real-time global seismic data from the last 24 hours
+                const response = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson');
+                if (!response.ok) throw new Error("Network response was not ok");
 
-                // GDACS standard response usually wraps the array inside an 'events' or 'features' key, 
-                // or returns it directly. We fall back safely.
-                const incidentList = res.events || res || [];
-                setDisasters(incidentList);
+                const data = await response.json();
+
+                // Map the GeoJSON features array to fit our clean frontend card design
+                const formattedEarthquakes = (data.features || []).slice(0, 15).map((feature: any) => {
+                    const props = feature.properties || {};
+                    const coords = feature.geometry?.coordinates || [];
+
+                    // Format the timestamp nicely into a readable date string
+                    const eventDate = props.time
+                        ? new Date(props.time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : new Date().toLocaleDateString();
+
+                    return {
+                        eventid: feature.id || Math.random(),
+                        eventtype: "EQ", // Hardcoded to Earthquake shortcode for our badge/color matching
+                        eventname: props.title || "Significant Seismic Activity", // Pre-built crisp news headline
+                        alertlevel: props.alert ? props.alert.toUpperCase() : "GREEN",
+                        country: props.place || "Seismic Fault Line",
+                        fromdate: eventDate, // FIXED: Added missing property mapping
+                        // Generate a rich contextual summary paragraph dynamically using data metrics
+                        description: `A magnitude ${props.mag || 'N/A'} earthquake struck at a depth of ${coords[2] ? coords[2].toFixed(1) : '10'} km. A total of ${props.felt || 0} community felt-reports have been submitted.`
+                    };
+                });
+
+                setDisasters(formattedEarthquakes);
             } catch (error) {
-                console.error("Failed to fetch global incidents:", error);
+                console.error("Failed to parse USGS earthquake data stream:", error);
             } finally {
                 setLoading(false);
             }
@@ -28,8 +60,8 @@ export default function Home() {
         fetchData();
     }, []);
 
-    const getDisasterStyles = (eventType: any) => {
-        const types = {
+    const getDisasterStyles = (eventType: string) => {
+        const types: Record<string, { label: string; emoji: string; color: string }> = {
             EQ: { label: "Earthquake", emoji: "🌋", color: "from-red-500/20 to-orange-500/20 text-orange-400 border-orange-500/30" },
             TC: { label: "Cyclone", emoji: "🌀", color: "from-blue-500/20 to-cyan-500/20 text-cyan-400 border-cyan-500/30" },
             FL: { label: "Flood", emoji: "🌊", color: "from-blue-600/20 to-indigo-500/20 text-blue-400 border-blue-500/30" },
@@ -152,46 +184,51 @@ export default function Home() {
                 <div className="flex items-center gap-3 mb-6 px-4 relative">
                     <span className="w-2 h-2 rounded-full bg-red-500 animate-ping absolute"></span>
                     <span className="w-2 h-2 rounded-full bg-red-500 relative"></span>
-                    <h3 className="text-sm font-bold tracking-[0.2em] uppercase text-slate-400 pl-4">Live Global Incidents Feed</h3>
+                    <h3 className="text-sm font-bold tracking-[0.2em] uppercase text-slate-400 pl-4">Live USGS Earthquake Alerts</h3>
                 </div>
 
                 {loading ? (
                     <div className="h-48 flex items-center justify-center text-slate-500 text-sm font-semibold">
-                        Connecting to Global Radar Systems...
+                        Connecting to Global Seismic Radar Systems...
                     </div>
                 ) : disasters.length === 0 ? (
                     <div className="h-48 flex items-center justify-center text-slate-500 text-sm font-semibold">
-                        No active incidents monitored at this moment.
+                        No active seismic events recorded in the last 24 hours.
                     </div>
                 ) : (
                     <div className="relative w-full overflow-hidden py-4">
-                        <div className="flex gap-6 w-max animate-[scroll_40s_linear_infinite] hover:[animation-play-state:paused]">
+                        <div className="flex gap-6 w-max animate-[scroll_4s_linear_infinite] hover:[animation-play-state:paused]" style={{ animationDuration: '45s' }}>
                             {[...disasters, ...disasters].map((incident, index) => {
                                 const style = getDisasterStyles(incident.eventtype);
                                 return (
                                     <div
-                                        key={`${incident.eventid || index}-${index}`}
-                                        className="w-[350px] flex-shrink-0 bg-slate-900/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl flex flex-col justify-between hover:border-white/10 hover:bg-slate-900/60 transition-all group"
+                                        key={`${incident.eventid}-${index}`}
+                                        className="w-[360px] flex-shrink-0 bg-slate-900/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl flex flex-col justify-between hover:border-white/10 hover:bg-slate-900/60 transition-all group"
                                     >
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-start">
                                                 <span className={`px-3 py-1 text-xs font-black uppercase rounded-lg bg-gradient-to-r border ${style.color}`}>
                                                     {style.emoji} {style.label}
                                                 </span>
-                                                <span className="text-[11px] font-bold text-slate-500 tracking-wider">
-                                                    Alert: {incident.alertlevel || 'Unknown'}
+                                                <span className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                                                    Alert: {incident.alertlevel}
                                                 </span>
                                             </div>
-                                            <h4 className="text-white font-bold text-base tracking-tight line-clamp-1 group-hover:text-cyan-400 transition-colors">
+                                            
+                                            {/* REAL NEWS HEADLINE */}
+                                            <h4 className="text-white font-bold text-sm tracking-tight line-clamp-2 group-hover:text-cyan-400 transition-colors min-h-[40px]">
                                                 {incident.eventname}
                                             </h4>
-                                            <p className="text-slate-400 text-xs leading-relaxed line-clamp-2">
-                                                {incident.description || 'No immediate textual damage analysis reported.'}
+                                            
+                                            {/* GENERATED NEWS REPORT */}
+                                            <p className="text-slate-400 text-xs leading-relaxed line-clamp-3">
+                                                {incident.description}
                                             </p>
                                         </div>
+                                        
                                         <div className="border-t border-white/5 mt-4 pt-3 flex justify-between items-center text-[11px] text-slate-500 font-medium">
-                                            <span>📍 {incident.country || 'Global Waters'}</span>
-                                            <span>⏱️ {incident.fromdate ? incident.fromdate.split('T')[0] : 'Recent'}</span>
+                                            <span className="max-w-[180px] truncate">📍 {incident.country}</span>
+                                            <span>⏱️ {incident.fromdate}</span>
                                         </div>
                                     </div>
                                 );
@@ -297,7 +334,7 @@ export default function Home() {
                 }
                 @keyframes scroll {
                   0% { transform: translateX(0); }
-                  100% { transform: translateX(-10%); }
+                  100% { transform: translateX(-30%); }
                 }
                 `
             }} />

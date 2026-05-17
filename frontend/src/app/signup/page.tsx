@@ -21,6 +21,10 @@ const Login = () => {
         try {
             if (authResult['code']) {
 
+                console.log(authResult);
+                // axios.post('http://localhost:4000/signup',values)
+                // .then((res)=>console.log("Registration Completed Successfully", res))
+                // // .catch((err)=>console.log(err));
             }
 
         }
